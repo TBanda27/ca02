@@ -1,53 +1,40 @@
-# Dublin House Search - Streamlit App
+# Dublin House Search
 
-A simple, minimal one-page application to search for rental properties in Dublin.
+Search rental properties in Dublin scraped from property.ie and myhome.ie.
+
+**Live App:** https://scrappedhouses.streamlit.app/
 
 ## Features
 
-- Search by price range, bedrooms, bathrooms, furnished status, and location
-- Clean, responsive UI with no JavaScript required
-- Fast in-memory CSV filtering
-- Clickable links to property listings
+- Automatic weekly to monthly rent conversion (52/12 formula)
+- SQLite database storage with duplicate handling
+- Search by price, bedrooms, bathrooms, furnished status, and location
+- Displays both converted monthly rent and original rent values
 
-## Project Structure
+## Quick Start
 
-```
-├── app.py                        # Single-file Streamlit app
-└── data/
-    └── dublin_all_sources.csv    # Housing data
-```
-
-
-```
-
-## Running Locally
-
-1. Install dependencies:
+1. **Install dependencies:**
 ```bash
-pip install streamlit pandas
+pip install -r requirements.txt
 ```
 
-2. Run the app:
+2. **Run scrapers to populate database:**
+```bash
+python utils/main.py
+```
+
+3. **Launch Streamlit app:**
 ```bash
 streamlit run app.py
 ```
 
-3. Open browser at: `http://localhost:8501`
-
-## Search Filters
-
-- **Rent Range**: Slider to filter by monthly rent (EUR)
-- **Bedrooms**: Dropdown (Any, Studio, 1, 2, 3, 4+)
-- **Bathrooms**: Dropdown (Any, 1, 2, 3+)
-- **Furnished**: Dropdown (Any, Yes, No, Unknown)
-- **Location**: Text search for address/area keywords
-- **Clear All**: Reset all filters
-
 ## Data Sources
 
-The app uses data from:
 - property.ie
 - myhome.ie
-- daft.ie
 
-All data is stored in `data/dublin_all_sources.csv`
+Data stored in `data/rentals.db` (SQLite) with CSV backups.
+
+---
+
+*Made by tbanda27*
