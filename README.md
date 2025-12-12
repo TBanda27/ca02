@@ -37,4 +37,3 @@ Data stored in `data/rentals.db` (SQLite) with CSV backups.
 
 ---
 
-*Made by tbanda27*
