@@ -107,7 +107,7 @@ class MyHomeIEScraper:
                 addr_elem = card.find_element(By.CSS_SELECTOR, "h3.card-text")
                 data["address"] = addr_elem.text.strip()
                 link_elem = card.find_element(By.CSS_SELECTOR, "a")
-                data["url"] = "https://www.myhome.ie" + link_elem.get_attribute("href")
+                data["url"] = "" + link_elem.get_attribute("href")
 
                 # Price
                 price_elem = card.find_element(By.CSS_SELECTOR, "h2.card-title")

@@ -6,43 +6,57 @@ import os
 # Page config
 st.set_page_config(page_title="Dublin House Search", page_icon="🏠", layout="wide")
 
-# Load data
+# Load data from SQLite database
 @st.cache_data
 def load_data():
-    # Load from SQLite database
     db_path = os.path.join('data', 'rentals.db')
 
-    # Fallback to CSV if database doesn't exist
     if not os.path.exists(db_path):
-        df = pd.read_csv('data/dublin_all_sources.csv')
+        st.error(f"Database not found at {db_path}. Please run the scrapers first: `python utils/main.py`")
+        return pd.DataFrame()
+
+    # Load from SQLite database
+    try:
+        conn = sqlite3.connect(db_path)
+        df = pd.read_sql_query('''
+            SELECT source, address, url, rent_eur, rent_period, original_rent,
+                   summary, beds, baths, furnished, scraped_at, updated_at
+            FROM rentals
+            ORDER BY updated_at DESC
+        ''', conn)
+        conn.close()
+
         # Clean data
         df['rent_eur'] = pd.to_numeric(df['rent_eur'], errors='coerce')
         df['beds'] = pd.to_numeric(df['beds'], errors='coerce')
         df['baths'] = pd.to_numeric(df['baths'], errors='coerce')
+
         return df
-
-    # Load from database
-    conn = sqlite3.connect(db_path)
-    df = pd.read_sql_query('''
-        SELECT source, address, url, rent_eur, rent_period, original_rent,
-               summary, beds, baths, furnished, scraped_at, updated_at
-        FROM rentals
-        ORDER BY scraped_at DESC
-    ''', conn)
-    conn.close()
-
-    # Clean data
-    df['rent_eur'] = pd.to_numeric(df['rent_eur'], errors='coerce')
-    df['beds'] = pd.to_numeric(df['beds'], errors='coerce')
-    df['baths'] = pd.to_numeric(df['baths'], errors='coerce')
-
-    return df
+    except Exception as e:
+        st.error(f"Error loading database: {e}")
+        return pd.DataFrame()
 
 df = load_data()
 
 # Title
 st.title("🏠 Dublin House Search")
 st.markdown("Search for rental properties in Dublin from multiple sources")
+
+# Show database info if data exists
+if len(df) > 0:
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Listings", len(df))
+    with col2:
+        weekly_count = len(df[df['rent_period'] == 'weekly']) if 'rent_period' in df.columns else 0
+        st.metric("Weekly (Converted)", weekly_count)
+    with col3:
+        monthly_count = len(df[df['rent_period'] == 'monthly']) if 'rent_period' in df.columns else 0
+        st.metric("Originally Monthly", monthly_count)
+    with col4:
+        sources_count = df['source'].nunique()
+        st.metric("Data Sources", sources_count)
+    st.markdown("---")
 
 # Sidebar filters
 st.sidebar.header("Search Filters")
@@ -117,8 +131,8 @@ if len(filtered_df) > 0:
     # Display as table with clickable links
     # Check if rent_period column exists (for database mode)
     if 'rent_period' in filtered_df.columns:
-        display_df = filtered_df[['address', 'rent_eur', 'rent_period', 'original_rent', 'beds', 'baths', 'furnished', 'summary', 'url']].copy()
-        display_df.columns = ['Address', 'Rent (EUR/month)', 'Period', 'Original Rent', 'Beds', 'Baths', 'Furnished', 'Summary', 'URL']
+        display_df = filtered_df[['address', 'rent_eur', 'original_rent', 'beds', 'baths', 'furnished', 'summary', 'url']].copy()
+        display_df.columns = ['Address', 'Rent (EUR/month)', 'Original Rent', 'Beds', 'Baths', 'Furnished', 'Summary', 'URL']
     else:
         display_df = filtered_df[['address', 'rent_eur', 'beds', 'baths', 'furnished', 'summary', 'url']].copy()
         display_df.columns = ['Address', 'Rent (EUR)', 'Beds', 'Baths', 'Furnished', 'Summary', 'URL']
@@ -140,4 +154,5 @@ else:
 
 # Footer
 st.markdown("---")
-st.markdown("Data sources: property.ie, myhome.ie, daft.ie")
+st.markdown("**Data sources:** property.ie, myhome.ie")
+st.markdown("*Made by tbanda27*")

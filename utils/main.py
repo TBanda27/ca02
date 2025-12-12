@@ -9,7 +9,6 @@ sys.path.insert(0, house_scrapers_path)
 
 from property_ie_scrapper import PropertyIEScraper
 from homes_ie_scrapper import MyHomeIEScraper
-from daft_ie_scrapper import DaftIEScraper
 
 # Import database module
 utils_path = os.path.dirname(__file__)
@@ -58,7 +57,6 @@ def run_all_scrapers():
     scrapers = [
         (PropertyIEScraper, "dublin_property_ie.csv"),
         (MyHomeIEScraper, "dublin_myhome_ie.csv"),
-        (DaftIEScraper, "dublin_daft_ie.csv"),
     ]
 
     for scraper_class, filename in scrapers:
