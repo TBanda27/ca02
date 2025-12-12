@@ -11,15 +11,24 @@ from property_ie_scrapper import PropertyIEScraper
 from homes_ie_scrapper import MyHomeIEScraper
 from daft_ie_scrapper import DaftIEScraper
 
-def run_scraper(scraper_class, filename):
-    """Run a single scraper and save to individual CSV"""
+# Import database module
+utils_path = os.path.dirname(__file__)
+sys.path.insert(0, utils_path)
+from database import RentalDatabase
+
+def run_scraper(scraper_class, filename, db):
+    """Run a single scraper and save to database and CSV"""
     scraper = scraper_class()
     listings = scraper.run()
 
     print(f"\nSCRAPING COMPLETE: {len(listings)} listings from {scraper_class.__name__}")
 
     if listings:
-        # Save to data folder
+        # Save to database
+        inserted, updated = db.insert_many(listings)
+        print(f"DATABASE: {inserted} inserted, {updated} updated")
+
+        # Also save to CSV for backup
         data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
         os.makedirs(data_dir, exist_ok=True)
         filepath = os.path.join(data_dir, filename)
@@ -29,15 +38,19 @@ def run_scraper(scraper_class, filename):
             writer = csv.DictWriter(f, fieldnames=keys)
             writer.writeheader()
             writer.writerows(listings)
-        print(f"SAVED TO: {filepath}")
+        print(f"CSV BACKUP SAVED TO: {filepath}")
 
     return listings
 
 def run_all_scrapers():
-    """Run all house scrapers and create both individual and combined CSVs"""
+    """Run all house scrapers and save to SQLite database"""
     print("=" * 100)
     print("RUNNING ALL HOUSE SCRAPERS")
     print("=" * 100)
+
+    # Initialize database
+    db = RentalDatabase()
+    print(f"Database initialized at: {db.db_path}")
 
     all_listings = []
 
@@ -53,11 +66,11 @@ def run_all_scrapers():
         print(f"Starting {scraper_class.__name__}...")
         print(f"{'='*100}")
 
-        listings = run_scraper(scraper_class, filename)
+        listings = run_scraper(scraper_class, filename, db)
         if listings:
             all_listings.extend(listings)
 
-    # Create combined CSV
+    # Create combined CSV for backward compatibility
     if all_listings:
         print(f"\n{'='*100}")
         print("CREATING COMBINED DATASET")
@@ -67,26 +80,31 @@ def run_all_scrapers():
         combined_filepath = os.path.join(data_dir, "dublin_all_sources.csv")
 
         # Use consistent field order
-        fieldnames = ["source", "address", "url", "rent_eur", "summary", "beds", "baths", "furnished"]
+        fieldnames = ["source", "address", "url", "rent_eur", "rent_period", "original_rent", "summary", "beds", "baths", "furnished"]
 
         with open(combined_filepath, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(all_listings)
 
-        print(f"\nCOMBINED DATASET:")
+        print(f"\nCOMBINED CSV BACKUP:")
         print(f"  Total listings: {len(all_listings)}")
         print(f"  Saved to: {combined_filepath}")
 
-        # Print breakdown by source
-        sources = {}
-        for listing in all_listings:
-            source = listing.get("source", "unknown")
-            sources[source] = sources.get(source, 0) + 1
+    # Print database statistics
+    print(f"\n{'='*100}")
+    print("DATABASE STATISTICS")
+    print(f"{'='*100}")
+    stats = db.get_stats()
+    print(f"Total listings in database: {stats['total']}")
+    print(f"\nBreakdown by source:")
+    for source, count in stats['by_source'].items():
+        print(f"  - {source}: {count} listings")
+    print(f"\nRent period breakdown:")
+    print(f"  - Weekly (converted to monthly): {stats['weekly_converted']}")
+    print(f"  - Originally monthly: {stats['monthly_original']}")
 
-        print(f"\n  Breakdown by source:")
-        for source, count in sources.items():
-            print(f"    - {source}: {count} listings")
+    db.close()
 
 if __name__ == "__main__":
     run_all_scrapers()

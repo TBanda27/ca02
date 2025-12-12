@@ -183,7 +183,24 @@ class DaftIEScraper:
                 # Extract rent from price text
                 price_text = price.text if price else ''
                 rent_match = re.search(r'€([\d,]+)', price_text)
-                rent_eur = int(rent_match.group(1).replace(',', '')) if rent_match else None
+                rent_value = int(rent_match.group(1).replace(',', '')) if rent_match else None
+
+                # Check if rent is weekly or monthly
+                price_lower = price_text.lower()
+                if 'month' in price_lower or '/m' in price_lower or 'pm' in price_lower:
+                    rent_eur = rent_value
+                    rent_period = "monthly"
+                    original_rent = rent_value
+                elif 'week' in price_lower or '/w' in price_lower or 'pw' in price_lower:
+                    # Weekly rent, convert to monthly
+                    rent_period = "weekly"
+                    original_rent = rent_value
+                    rent_eur = round(rent_value * (52 / 12)) if rent_value else None
+                else:
+                    # Default to monthly if unclear
+                    rent_eur = rent_value
+                    rent_period = "monthly"
+                    original_rent = rent_value
 
                 # Extract beds and baths from description
                 beds, baths = self._extract_beds_baths(description)
@@ -203,6 +220,8 @@ class DaftIEScraper:
                     "address": address,
                     "url": home_url,
                     "rent_eur": rent_eur,
+                    "rent_period": rent_period,
+                    "original_rent": original_rent,
                     "summary": summary,
                     "beds": beds,
                     "baths": baths,

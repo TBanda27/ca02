@@ -46,9 +46,6 @@ class MyHomeIEScraper:
         path = re.sub(r'\?page=\d+', f'?page={page}', path)
         return base + path
 
-    # --------------------------------------------------------------------- #
-    # Furnished detection
-    # --------------------------------------------------------------------- #
     def _detect_furnished(self, text: str) -> str:
         t = text.lower()
         if "unfurnished" in t:
@@ -98,9 +95,6 @@ class MyHomeIEScraper:
         print(f"\n[FINAL] Total unique listings scraped: {len(all_listings)}")
         return all_listings
 
-    # --------------------------------------------------------------------- #
-    # Parse a single page of cards (Selenium only)
-    # --------------------------------------------------------------------- #
     def _parse_page(self, cards) -> List[Dict]:
         listings = []
         for i, card in enumerate(cards, 1):
@@ -119,7 +113,24 @@ class MyHomeIEScraper:
                 price_elem = card.find_element(By.CSS_SELECTOR, "h2.card-title")
                 price_text = price_elem.text.strip()
                 rent_match = re.search(r'€([\d,]+)', price_text)
-                data["rent_eur"] = int(rent_match.group(1).replace(',', '')) if rent_match else None
+                rent_value = int(rent_match.group(1).replace(',', '')) if rent_match else None
+
+                # Check if rent is weekly or monthly
+                price_lower = price_text.lower()
+                if 'month' in price_lower or '/m' in price_lower or 'pm' in price_lower:
+                    data["rent_eur"] = rent_value
+                    data["rent_period"] = "monthly"
+                    data["original_rent"] = rent_value
+                elif 'week' in price_lower or '/w' in price_lower or 'pw' in price_lower:
+                    # Weekly rent, convert to monthly
+                    data["rent_period"] = "weekly"
+                    data["original_rent"] = rent_value
+                    data["rent_eur"] = round(rent_value * (52 / 12)) if rent_value else None
+                else:
+                    # Default to monthly if unclear
+                    data["rent_eur"] = rent_value
+                    data["rent_period"] = "monthly"
+                    data["original_rent"] = rent_value
 
                 # Info strip
                 try:
@@ -161,9 +172,6 @@ class MyHomeIEScraper:
                 continue
         return listings
 
-    # --------------------------------------------------------------------- #
-    # Run
-    # --------------------------------------------------------------------- #
     def run(self) -> List[Dict]:
         listings = self.scrap_all_pages()
         self.driver.quit()

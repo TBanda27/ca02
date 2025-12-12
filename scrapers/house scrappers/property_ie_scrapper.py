@@ -148,7 +148,19 @@ class PropertyIEScraper:
 
                 rent_text = card.find_element(By.CSS_SELECTOR, ".sresult_description h3").text.strip()
                 rent_match = re.search(r'€([\d,]+)', rent_text)
-                data["rent_eur"] = int(rent_match.group(1).replace(',', '')) if rent_match else None
+                rent_value = int(rent_match.group(1).replace(',', '')) if rent_match else None
+
+                # Check if rent is weekly or monthly
+                rent_lower = rent_text.lower()
+                if 'monthly' in rent_lower:
+                    data["rent_eur"] = rent_value
+                    data["rent_period"] = "monthly"
+                    data["original_rent"] = rent_value
+                else:
+                    # Assume weekly if not explicitly monthly, convert to monthly
+                    data["rent_period"] = "weekly"
+                    data["original_rent"] = rent_value
+                    data["rent_eur"] = round(rent_value * (52 / 12)) if rent_value else None
 
                 summary = card.find_element(By.CSS_SELECTOR, ".sresult_description h4").text.strip()
                 data["summary"] = summary

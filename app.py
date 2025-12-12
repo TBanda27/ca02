@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
+import os
 
 # Page config
 st.set_page_config(page_title="Dublin House Search", page_icon="🏠", layout="wide")
@@ -7,11 +9,33 @@ st.set_page_config(page_title="Dublin House Search", page_icon="🏠", layout="w
 # Load data
 @st.cache_data
 def load_data():
-    df = pd.read_csv('data/dublin_all_sources.csv')
+    # Load from SQLite database
+    db_path = os.path.join('data', 'rentals.db')
+
+    # Fallback to CSV if database doesn't exist
+    if not os.path.exists(db_path):
+        df = pd.read_csv('data/dublin_all_sources.csv')
+        # Clean data
+        df['rent_eur'] = pd.to_numeric(df['rent_eur'], errors='coerce')
+        df['beds'] = pd.to_numeric(df['beds'], errors='coerce')
+        df['baths'] = pd.to_numeric(df['baths'], errors='coerce')
+        return df
+
+    # Load from database
+    conn = sqlite3.connect(db_path)
+    df = pd.read_sql_query('''
+        SELECT source, address, url, rent_eur, rent_period, original_rent,
+               summary, beds, baths, furnished, scraped_at, updated_at
+        FROM rentals
+        ORDER BY scraped_at DESC
+    ''', conn)
+    conn.close()
+
     # Clean data
     df['rent_eur'] = pd.to_numeric(df['rent_eur'], errors='coerce')
     df['beds'] = pd.to_numeric(df['beds'], errors='coerce')
     df['baths'] = pd.to_numeric(df['baths'], errors='coerce')
+
     return df
 
 df = load_data()
@@ -91,11 +115,16 @@ st.subheader(f"Found {len(filtered_df)} properties")
 
 if len(filtered_df) > 0:
     # Display as table with clickable links
-    display_df = filtered_df[['address', 'rent_eur', 'beds', 'baths', 'furnished', 'summary', 'url']].copy()
-    display_df.columns = ['Address', 'Rent (EUR)', 'Beds', 'Baths', 'Furnished', 'Summary', 'URL']
+    # Check if rent_period column exists (for database mode)
+    if 'rent_period' in filtered_df.columns:
+        display_df = filtered_df[['address', 'rent_eur', 'rent_period', 'original_rent', 'beds', 'baths', 'furnished', 'summary', 'url']].copy()
+        display_df.columns = ['Address', 'Rent (EUR/month)', 'Period', 'Original Rent', 'Beds', 'Baths', 'Furnished', 'Summary', 'URL']
+    else:
+        display_df = filtered_df[['address', 'rent_eur', 'beds', 'baths', 'furnished', 'summary', 'url']].copy()
+        display_df.columns = ['Address', 'Rent (EUR)', 'Beds', 'Baths', 'Furnished', 'Summary', 'URL']
 
     # Sort by rent
-    display_df = display_df.sort_values('Rent (EUR)')
+    display_df = display_df.sort_values(display_df.columns[1])  # Sort by rent column
 
     # Display with pagination
     st.dataframe(
