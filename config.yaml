@@ -1,0 +1,50 @@
+# config.yaml
+property_ie:
+  website:
+    base_url: "https://www.property.ie"
+    search_path: "/property-to-let/dublin-city/price_international_rental-onceoff_standard/p_1/"
+
+  scraper:
+    headless: true
+    timeout: 15
+    delay: 2
+
+
+daft_ie:
+  website:
+    base_url: "https://www.daft.ie"
+    search_path: "/property-for-rent/dublin?page=1"
+
+  scraper:
+    headless: true
+    timeout: 15
+    delay: 5
+
+myhome_ie:
+  website:
+    base_url: "https://www.myhome.ie"
+    search_path: "/rentals/dublin/house-to-rent?page=1"
+  scraper:
+    headless: true
+    timeout: 15
+    delay: 2
+
+# Job Boards
+indeed_ie:
+  website:
+    base_url: "https://ie.indeed.com"
+    search_path: "/jobs?q=developer&l=Dublin"
+  scraper:
+    headless: false
+    timeout: 20
+    delay: 3
+
+irishjobs_ie:
+  website:
+    base_url: "https://www.irishjobs.ie"
+    search_path: "/jobs?q=developer&l=Dublin"
+  scraper:
+    headless: false
+    timeout: 20
+    delay: 3
+
